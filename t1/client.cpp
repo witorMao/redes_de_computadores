@@ -39,34 +39,58 @@ int main(){
 
     string serverResponse;
     string auxBuffer; //string auxiliar pra ler input de boa
-    auxBuffer.resize(4096);
+    // auxBuffer.resize(4096);
     char buffer[4096]; //buffer que realmente vai ser utilizado nas funções de envio e recebimento de dados
     int bytesReceived; //recebe o retorno de recv(), para verificação de erros no recebimento de mensagens
     int bytesSend = -1; //recebe o retorno de send(), para verificação de erros no envio de mensagem
     bool bigMessage = false; //auxiliar pra verificação de mensagens com mais de 4096 bytes
 
+    string auxDoAux;
+
+    char aux;
     //mensagem pro servidor
-    cout << "Type the message:" << endl;    
+    cout << "Type the message:" << endl;   
 
     while(true){
+        
         //reinicializando serverResponse em todo loop
         serverResponse = "";
 
         //lendo entrada na string auxbuffer pra facilitar e mais pra frente copia os dados pra buffer que eh um array 
-        //de char pra não bugar a send()  e a recv()
+        //de char pra não bugar a send() e a recv()
         cout << ">";
-
-        //usa assim pra ler :
-        getline(cin, auxBuffer);
-
-        //n usa assim pra ler
-        // cin >> auxBuffer;
-
-        cout << endl <<  "auxBuffer: " << endl;
-        cout << auxBuffer << endl;
-    
-        if(auxBuffer.size() > 4096) bigMessage = true;
         
+        //lendo tudo quanto é tipo de entrada até algum ser "/enter", que é o comando pra enviar msg
+        //isso só foi feito pra permitir que o usuario digite mais de um parágrafo em uma mensagem
+        //CLARAMENTE GAMBIARRA
+        while(true){
+            getline(cin, auxDoAux);
+            if(auxDoAux.compare("/enter") != 0){
+                auxBuffer += auxDoAux;
+                auxBuffer += "\n";
+            }else{
+                auxBuffer.erase(auxBuffer.size()-1);//tirando o ultimo "\n" que foi adicionado ali em cima
+                break;
+            } 
+        }
+
+        //outra gambiarra mas como todas as outra funções de leitura que eu tentei usar EOF 
+        //como indicador pra parar de ler, deu loop infinito
+        // while(true){
+        //     aux = getchar();
+        //     if (aux != EOF) auxBuffer += aux;
+        //     else break;
+        // }
+        
+        // //usa assim pra ler :
+        // getline(cin, auxBuffer);
+
+        //saindo fechando a conexão
+        if(auxBuffer.compare("/quit") == 0) break;
+
+        if(auxBuffer.size() > 4096) bigMessage = true;
+
+
         // se o tamanho da mensagem lida for maior do que 4096 caracteres, manda os 4096 primeiros e dps apaga eles do auxBuffer
         // isso se repete até o auxBuffer ficar com tamanho <= 4096, quando atingir isso ele vai pra a verificação de baixo que 
         // é pra mandar uma mensagem que pode ser enviada de uma vez só
@@ -79,9 +103,14 @@ int main(){
             //indicar que a msg n terminou ainda
             strncpy(buffer, auxBuffer.c_str(), 4095);
             
-            //colocando  3 aqui só pra indicar que a msg n terminou ainda
-            buffer[4095] = 3;
+            // cout << endl << endl << "tamanho do buffer parcial" << sizeof(buffer) << endl << "buffer parcial: " << endl;
+            // cout << buffer << endl;
+
+            //colocando 4 aqui só pra indicar que a msg n terminou ainda
+            buffer[sizeof(buffer) - 1] = 4;
             
+            // cout << "ultimo caracter do buffer parcial: " <<  buffer[sizeof(buffer) - 1] << endl;
+
             //enviando os 4096 primeiros caracteres de auxBuffer que já estão em buffer
             bytesSend = send(clientSocket, buffer, 4096, 0);
 
@@ -99,8 +128,8 @@ int main(){
 
             serverResponse += buffer;
 
-            //excluindo a ultima posição de server por ter 3 no valor
-            if(buffer[4095] == 3) serverResponse.erase(serverResponse.size()-1); 
+            //excluindo a ultima posição de server por ter 4 no valor
+            if(buffer[4095] == 4) serverResponse.erase(serverResponse.size()-1); 
 
             if(bytesReceived == -1) {
                 cerr << "Error in connection!" << endl;
@@ -109,13 +138,14 @@ int main(){
             
             //apaga os 4095 primeiros caracteres do auxBuffer (os que acabaram de ser enviados) e deixa só o resto
             auxBuffer.erase(0, 4095);
+
         }
 
         //limpando buffer pra poder enviar dados ao servidor
         memset(buffer, 0, 4096);
 
         //copiando input (ou o que resta dele, caso tenha entrado no while de cima) pra buffer
-        strncpy(buffer, auxBuffer.c_str(), auxBuffer.size()+1);
+        strncpy(buffer, auxBuffer.c_str(), auxBuffer.size());
 
         //enviando caracteres de auxBuffer que já estão em buffer
         bytesSend = send(clientSocket, buffer, 4096, 0);
@@ -137,8 +167,10 @@ int main(){
         if(bytesReceived == -1) {
             cerr << "Error in connection!" << endl;
             // break;
-        }else cout << "Server response: " << serverResponse << endl;
+        }else cout << endl << "Server response: " << serverResponse << endl;
 
+        auxBuffer.clear();
+        auxDoAux.clear();
     }   
  
     close(clientSocket);

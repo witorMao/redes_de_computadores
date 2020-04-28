@@ -1,178 +1,206 @@
-#include <iostream>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <string.h>
-#include <netdb.h>
 #include <arpa/inet.h>
-#define QUEUELIM 10
+#include <iostream>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <fstream>
 
 using namespace std;
 
-int main(){
-    //criando socket do cliente
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    
-    if(clientSocket == -1) {
-        cerr << "Failure at creating client socket!" << endl;
+int main(int argc, char const *argv[])
+{
+
+    // Creating a client socket to connect with the server
+    int socket = ::socket(AF_INET, SOCK_STREAM, 0);
+
+    if (socket == -1)
+    {
+        cout << "Can't create a socket\n";
         return -1;
     }
 
+    // Creating a hint for the server
     int port;
-    string ipValue;
-    //lendo endereço e porta do servidor ao qual o cliente vai se conectar
-    cout << "Type \"ip port\" form the server: " << endl;
-    cin >> ipValue >> port;
+    string ipAddress;
+    sockaddr_in server;
 
-    //endereço onde o cliente vai se conectar
-    struct sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(port);
-    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    // Getting server's ip address
+    cout << "Enter ip address: "
+         << "\n";
+    getline(cin, ipAddress);
 
-    //conectando cliente ao servidor
-    int connectResult = connect(clientSocket, (struct sockaddr *) &serverAddress, (socklen_t) sizeof(serverAddress));
-    if(connectResult == -1){
-        cout << "Can not connect!" << endl;
+    // Getting server's port
+    cout << "Enter port: "
+         << "\n";
+    cin >> port;
+
+    // Adressing some info in order to connect to the server
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    inet_pton(AF_INET, ipAddress.c_str(), &server.sin_addr);
+
+    // Connecting to the server on 'socket'
+    int connect = ::connect(socket, (sockaddr *)&server, sizeof(server));
+
+    if (connect == -1)
+    {
+        cout << "Can't connect\n";
+        return -2;
     }
 
-    string serverResponse;
-    string auxBuffer; //string auxiliar pra ler input de boa
-    // auxBuffer.resize(4096);
-    char buffer[4096]; //buffer que realmente vai ser utilizado nas funções de envio e recebimento de dados
-    int bytesReceived; //recebe o retorno de recv(), para verificação de erros no recebimento de mensagens
-    int bytesSend = -1; //recebe o retorno de send(), para verificação de erros no envio de mensagem
+    int send = 0;          // variable responsible to store results of send()
+    string input;          // all the user input messages will be stored here
+    char buff[4096];       // all the messages from the server will be stored here
+    string nickname;       // variable to store users nickname
+    int bytesReceived = 0; // variable responsible to store results of recv()
+    char bigNickname[67] = "\nYour nickname is bigger than 20 letters. Please, enter it again: ";
+    bytesReceived = recv(socket, buff, 91, 0);   // receiving welcome message from server
+    cout << string(buff, bytesReceived) << "\n"; // printing welcome message from server
+    getchar();                                   // removing the '\n' present in the buffer from past inputs
+    getline(cin, nickname); // saving client's nickname
+
+    if (nickname.size() > 20)
+    {
+
+        while (true)
+        {
+            cout << bigNickname << "\n"; // printing error message
+            getline(cin, nickname);      // saving new client's nickname
+
+            if (nickname.size() <= 20)
+            {
+                ::send(socket, nickname.c_str(), nickname.size(), 0); // sending new nickname
+                bytesReceived = recv(socket, buff, 40, 0);            // receiving confirmation message from server
+                cout << string(buff, bytesReceived) << "\n";          // displaying received message
+                break;
+            }
+        }
+    }
+
+    else
+    {
+        ::send(socket, nickname.c_str(), nickname.size(), 0); // sending nickname
+        bytesReceived = recv(socket, buff, 40, 0);            // receiving confirmation message from server
+        cout << string(buff, bytesReceived) << "\n";          // displaying received message
+    }
+
+    string serverResponse;//armazena a resposta recebida do servidor, pra realizar uma verificação com a entrada depois
+    string auxCompare; //string auxiliar pra verificação das mensagens recebidas pelo servidor, guarda as mensagens recebidas na entrada do programa
+    string auxDoAux;
     bool bigMessage = false; //auxiliar pra verificação de mensagens com mais de 4096 bytes
 
-    string auxDoAux;
-
-    char aux;
-    //mensagem pro servidor
-    cout << "Type the message:" << endl;   
-
-    while(true){
-        
-        //reinicializando serverResponse em todo loop
+    while (true)
+    {
+      //reinicializando serverResponse em todo loop
         serverResponse = "";
+        auxCompare = "";
 
-        //lendo entrada na string auxbuffer pra facilitar e mais pra frente copia os dados pra buffer que eh um array 
-        //de char pra não bugar a send() e a recv()
-        cout << ">";
-        
+        cout << "Type your message:" << endl
+             << "> ";
+
         //lendo tudo quanto é tipo de entrada até algum ser "/enter", que é o comando pra enviar msg
         //isso só foi feito pra permitir que o usuario digite mais de um parágrafo em uma mensagem
-        //CLARAMENTE GAMBIARRA
-        while(true){
+        while (true)
+        {
             getline(cin, auxDoAux);
-            if(auxDoAux.compare("/enter") != 0){
-                auxBuffer += auxDoAux;
-                auxBuffer += "\n";
-            }else{
-                auxBuffer.erase(auxBuffer.size()-1);//tirando o ultimo "\n" que foi adicionado ali em cima
+            if (auxDoAux.compare("/send") != 0)
+            {
+                //saindo fechando a conexão
+                if (auxDoAux.compare("/quit") == 0)
+                    return 0;
+
+                input += auxDoAux;
+                input += "\n";
+            }
+            else
+            {
+                input.erase(input.size() - 1); //tirando o ultimo "\n" que foi adicionado ali em cima
                 break;
-            } 
+            }
         }
 
-        //outra gambiarra mas como todas as outra funções de leitura que eu tentei usar EOF 
-        //como indicador pra parar de ler, deu loop infinito
-        // while(true){
-        //     aux = getchar();
-        //     if (aux != EOF) auxBuffer += aux;
-        //     else break;
-        // }
+        if (input.size() > 4096)
+            bigMessage = true;
         
-        // //usa assim pra ler :
-        // getline(cin, auxBuffer);
+        auxCompare = input;//guardando input nessa string auxiliar pra depois verificar se a mensagem enviada foi recebida corretamente
 
-        //saindo fechando a conexão
-        if(auxBuffer.compare("/quit") == 0) break;
+        while (input.size() > 4096)
+        {
+            memset(buff, 0, 4096); // cleaning the buffer
+            bytesReceived = 0;
 
-        if(auxBuffer.size() > 4096) bigMessage = true;
-
-
-        // se o tamanho da mensagem lida for maior do que 4096 caracteres, manda os 4096 primeiros e dps apaga eles do auxBuffer
-        // isso se repete até o auxBuffer ficar com tamanho <= 4096, quando atingir isso ele vai pra a verificação de baixo que 
-        // é pra mandar uma mensagem que pode ser enviada de uma vez só
-
-        while(auxBuffer.size() > 4096){
-            //limpando buffer pra poder enviar dados ao servidor
-            memset(buffer, 0, 4096);
-
-            //copiando os 4095 primeiros caracteres de auxBuffer pra buffer, o último caracter de buffer vai receber valor pra 
-            //indicar que a msg n terminou ainda
-            strncpy(buffer, auxBuffer.c_str(), 4095);
-            
-            // cout << endl << endl << "tamanho do buffer parcial" << sizeof(buffer) << endl << "buffer parcial: " << endl;
-            // cout << buffer << endl;
+            //copiando string input no array de caracteres buff
+            strncpy(buff, input.c_str(), 4095);
 
             //colocando 4 aqui só pra indicar que a msg n terminou ainda
-            buffer[sizeof(buffer) - 1] = 4;
-            
-            // cout << "ultimo caracter do buffer parcial: " <<  buffer[sizeof(buffer) - 1] << endl;
+            buff[4095] = 4;
 
-            //enviando os 4096 primeiros caracteres de auxBuffer que já estão em buffer
-            bytesSend = send(clientSocket, buffer, 4096, 0);
+            send = ::send(socket, buff, 4096, 0); // send the message to the server
 
-            //aqui eu dou um break pq deu ruim nome meio de uma mensagem grande então, mando o maluco reenviar tudo
-            if(bytesSend == -1) {
-                cerr << "Could not send the message! Try again! while" << endl;
-                break;
+            if (send == -1)
+            {
+                cout << "Couldn't send to server. Maybe you should try again.";
+                continue;
             }
 
             //limpando buffer pra receber resposta do servidor
-            memset(buffer, 0, 4096);
+            memset(buff, 0, 4096);
 
-            //recebendo resposta do servidor
-            bytesReceived = recv(clientSocket, buffer, 4096, 0);
+            bytesReceived = recv(socket, buff, 4096, 0); // receiving message from server
 
-            serverResponse += buffer;
+            if(buff[4095] == 4) buff[4095] = 0;
 
-            //excluindo a ultima posição de server por ter 4 no valor
-            if(buffer[4095] == 4) serverResponse.erase(serverResponse.size()-1); 
+            serverResponse += buff;
+            // serverResponse.erase(serverResponse.size()-1);
 
-            if(bytesReceived == -1) {
-                cerr << "Error in connection!" << endl;
-                // break;
-            }
-            
+            if (bytesReceived == -1)
+                cout << "Error on getting a server response.\n\n";
+
             //apaga os 4095 primeiros caracteres do auxBuffer (os que acabaram de ser enviados) e deixa só o resto
-            auxBuffer.erase(0, 4095);
-
+            input.erase(0, 4095);
         }
 
         //limpando buffer pra poder enviar dados ao servidor
-        memset(buffer, 0, 4096);
+        memset(buff, 0, 4096);
 
         //copiando input (ou o que resta dele, caso tenha entrado no while de cima) pra buffer
-        strncpy(buffer, auxBuffer.c_str(), auxBuffer.size());
+        strncpy(buff, input.c_str(), input.size());
 
         //enviando caracteres de auxBuffer que já estão em buffer
-        bytesSend = send(clientSocket, buffer, 4096, 0);
+        send = ::send(socket, buff, 4096, 0);
 
-        if(bytesSend == -1) {
-            if(bigMessage == true) continue; // se mensagem for > 4096 caracteres, já mostrou a mensagem la em cima
+        if (send == -1)
+        {
+            if (bigMessage == true)
+                continue; // se mensagem for > 4096 caracteres, já mostrou a mensagem la em cima
             cerr << "Could not send the message! Try again! 1" << endl;
             continue;
         }
 
         //limpando buffer pra receber resposta do servidor
-        memset(buffer, 0, 4096);
+        memset(buff, 0, 4096);
 
         //recebendo resposta do servidor
-        bytesReceived = recv(clientSocket, buffer, 4096, 0);
-        
-        serverResponse += buffer;
+        bytesReceived = recv(socket, buff, 4096, 0);
 
-        if(bytesReceived == -1) {
+        serverResponse += buff;
+
+        if (bytesReceived == -1)
+        {
             cerr << "Error in connection!" << endl;
-            // break;
-        }else cout << endl << "Server response: " << serverResponse << endl;
-
-        auxBuffer.clear();
+            break;
+        }
+        else if(serverResponse.compare(auxCompare) == 0) cout << "Message sent!" << "\n";
+    
+        input.clear();
         auxDoAux.clear();
-    }   
- 
-    close(clientSocket);
+    }
+
+    close(socket);
+
     return 0;
 }

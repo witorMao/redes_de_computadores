@@ -1,119 +1,139 @@
-#include <iostream>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <string.h>
-#include <netdb.h>
+/*
+    Establishing a socket to the server side of application.
+*/
+
 #include <arpa/inet.h>
-#define QUEUELIM 10
+#include <iostream>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 using namespace std;
 
-int main(){
-    //criando o socket do servidor
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    
-    if(serverSocket == -1) {
-        cerr << "Failure at creating socket!" << endl;
+int main(int argc, char const *argv[]) {
+
+    // Creating a sockaddr_in which describes the internet protocol version 4 (ipv4)
+
+    sockaddr_in server_address;
+    socklen_t serverSize = sizeof(server_address);
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(51000);
+    inet_pton(AF_INET, "0.0.0.0", &server_address.sin_addr);
+
+    // Creating a socket with IPv4 Internet protocols as communication domain and TCP as communication semantics.
+    // AF_INET = IPv4 protocol, SOCK_STREAM = TCP.
+    int socket = ::socket(AF_INET, SOCK_STREAM, 0);
+
+    // Checking for errors while creating a socket
+    if (socket == -1) {
+        cerr << "Can't create a socket.";
         return -1;
     }
 
-    //escolhendo ip e porta para o servidor escutar 
-    struct sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_addr.s_addr = INADDR_ANY; //vai escolher um endereço de ip automaticamente pro server
-    serverAddress.sin_port = htons(51000); //vai escolher uma porta aleatória que eteja disponível
-
-    //conectando servidor a porta selecionadad anteriormente
-    if(bind(serverSocket, (struct sockaddr *) &serverAddress, (socklen_t) sizeof(serverAddress)) != 0) {
-        cerr << "Can not connect to the IP/Port" << endl;
-        return -1;
+    // Binding the created socket 'socket' to an available address 'server_address' of size 'sizeof(server_address)' bytes.
+    // This step is commonly named as 'lqassigning a name to a socketrq'.
+    if (bind(socket, (sockaddr *)&server_address, serverSize) != 0) {
+        cerr << "Can't bind to IP/port.";
+        return -2;
     }
 
-    //escutando a porta
-    if(listen(serverSocket, QUEUELIM) != 0) cerr << "Can not listen!" << endl;
+    // Listenning for connections by marking 'socket' as a passive connection, i.e., 'a socket
+    // that will be used to accept incoming connection requests using accept()' later.
+    if (listen(socket, SOMAXCONN) != 0) {
+        cerr << "Can't listen to this port.";
+        return -3;
+    }
 
-    
-    struct sockaddr_in client; // guarda o endereço do cliente que acabou de se conectar ao servidor
+    // Accepting connections by extracting the first request on queue.
+    // If everything goes right, 'server_address' receives the connecting
+    // peer, 'address_length' receives the address' actual length and
+    // 'clientSocket' receives socket's descriptor.
+
+    int clientSocket;
+    sockaddr_in client;
+    char host[NI_MAXHOST];
+    char service[NI_MAXSERV];
     socklen_t clientSize = sizeof(client);
-    //aceitando conexão com o cliente
-    int clientSocket = accept(serverSocket, (struct sockaddr *) &client, &clientSize);
 
-    //isso aqui é só pra pegar o socket que se conectou ao server e mostrar na tela
-    char hostClient[NI_MAXHOST];
-    char svcClient[NI_MAXSERV];
+    clientSocket = accept(socket, (sockaddr *)&client, &clientSize);
 
-    getnameinfo((sockaddr*)&client, sizeof(client), hostClient, NI_MAXHOST, svcClient, NI_MAXSERV, 0); 
-    
-    cout << hostClient << " connected on port " << svcClient << endl;
+    if (clientSocket == -1) {
+        cerr << "Error on connecting to socket.";
+        return -4;
+    }
 
-    close(serverSocket);
+    close(socket);
 
-    string msg;//string auxiliar pra receber as mensagens recebidas e depois exibilas na tela
+    memset(host, 0, NI_MAXHOST);    // cleaning possible garbage on host
+    memset(service, 0, NI_MAXSERV); // cleaning possible garbage on service
 
-    char buffer[4096];//buffer parar se comunicar com o cliente
+    // get computer information
+    int info = getnameinfo((sockaddr *)&server_address, serverSize, host, NI_MAXHOST, service, NI_MAXSERV, 0);
 
-    int bytesReceived, bytesSend;//contador de bytes, respectivamente, recebidos e enviados, utilizados para verificação de erros
+    if (info)
+        cout << host << " connected on " << service << "\n";
+    else {
+        inet_ntop(AF_INET, &client.sin_addr, host, NI_MAXHOST);
+        cout << host << " connected on port " << ntohs(server_address.sin_port) << "\n";
+    }
 
-    while(true){
+    char buff[4096];
+    int bytesReceived = 0, bigNick = 0;
+
+    char nickname[20];
+    char confirmationMsg[14] = "Message sent!";
+    char confirmNick[40] = "Your nickname is registered. Have fun!!";
+    char welcomeMsg[91] = "Hello, there! Welcome to my TCP server.\nPlease, enter your nickname (max of 20 letters): ";
+    string msg;
+
+    send(clientSocket, welcomeMsg, sizeof(welcomeMsg), 0);             // sending welcome message
+    bytesReceived = recv(clientSocket, nickname, sizeof(nickname), 0); // waiting for user to input his nickname
+
+    send(clientSocket, confirmNick, sizeof(confirmNick), 0); // sending confirmation of nickname
+    string(nickname, 0, bytesReceived);                      // storing client's nickname
+
+    cout << "Client's nickname: " << nickname << "\n\n"
+         << "Start of the conversation:\n\n";
+
+    while (true) {
+
         //limpando msg pra poder mostrar certinho dps
-        msg = "";
+        msg.erase(0, msg.size());
 
-        //limpando buffer pra poder receber a mensagem do cliente
-        memset(buffer, 0, 4096);
-        
-        //recebendo mensagem
-        bytesReceived = recv(clientSocket, buffer, 4096, 0);
+        memset(buff, 0, 4096); // cleaning the buffer
+        bytesReceived = 0;
 
-        if(bytesReceived == -1) {
-            cout << "Error in connection!" << endl;
-            break;          
-        }
-        if(bytesReceived == 0) {
-            cout << "Client disconnected!" << endl;
+        // send(clientSocket, confirmationMsg, sizeof(confirmationMsg), 0); // asking for a message
+              
+        bytesReceived = recv(clientSocket, buff, 4096, 0);               // waiting for a message
+
+        // checking for any errors
+        if (bytesReceived == -1) {
+            cerr << "Error on receiving message. Stopping."
+                 << "\n";
             break;
         }
 
-        //verificando se a mensagem recebida terminou ou tem mais do que 4096 caracteres
-        //o valor 4 na última posição do buffer serve pra indicar que ela não terminou
-        while(buffer[4095] == 4){
-            //apagando o último caracteer que indica que ainda tem mais mensagem
-            buffer[4095] = 0;
-            
-            //guardando o pedaçode 4095 caracteres da mensagem recebida
-            msg += buffer;  
-
-            //enviando os 4096 primeiros caracteres de auxBuffer que já estão em buffer
-            bytesSend = send(clientSocket, buffer, 4096, 0);
-
-            //limpando o buffer pra receber mensagem novamente do cliente
-            memset(buffer, 0, 4096);
-            
-            //recebendo mensagem
-            bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-
-            if(bytesReceived == -1) {
-                cout << "Error in connection!" << endl;
-                break;          
-            }
-            if(bytesReceived == 0) {
-                cout << "Client disconnected!" << endl;
-                break;
-            }
+        if (bytesReceived == 0) {
+            cout << "Client disconnected. Stopping."
+                 << "\n";
+            break;
         }
+
+        send(clientSocket, buff, 4096, 0); // ressend message
 
         /* caso a mensagem tenha menos do que 4096 caracteres, ou seja o que restou da mensagem com mais de 4096 caracteres, 
         ela é colocada no buffer e enviada ao cliente */
-        msg += buffer;
+        buff[4095] = 0;
+        msg = buff;
 
-        //enviando caracteres de auxBuffer que já estão em buffer
-        bytesSend = send(clientSocket, buffer, 4096, 0);
-
-        cout << endl << "Recebido: " << msg << endl; 
+        cout << "Message from " << nickname << " : " << msg << "\n"; // display message
     }
 
     close(clientSocket);
 
-    return 0;
+    return 1;
 }

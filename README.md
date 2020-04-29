@@ -1,6 +1,6 @@
 # Internet Relay Chat (IRC)
 
-This project was created in order to **simulate a IRC (Internet Relay Chat)** adapting [RFC 1459 specifications](https://tools.ietf.org/html/rfc1459).
+This project was created in order to **simulate an Internet Relay Chat (IRC)** adapting [RFC 1459 specifications](https://tools.ietf.org/html/rfc1459).
 
 ### Development
 

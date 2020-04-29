@@ -24,4 +24,4 @@ This project was made by:
   - Enter **51000** as port;
   - Enter your **nickname**;
   - Type your message, type enter and then type "/send" to send your message;
-  - If you want to end communication, type "/quit" and it will be done.
+  - If you want to end communication, type "/quit".

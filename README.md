@@ -23,4 +23,6 @@ This project was made by:
   - Enter **0.0.0.0** as ip address;
   - Enter **51000** as port;
   - Enter your **nickname**;
+  - Type your message and then type "/send" in a new line to send your message;
   - Send your first message and enjoy! :)
+  - If you want to quit of the communication, type in a new line "/quit" and done.

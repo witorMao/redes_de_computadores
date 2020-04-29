@@ -10,8 +10,8 @@ All the project was developed using **C++ languague** and **g++ compiler** on Li
 
 This project was made by:
 
-- Henrique de S. Q. dos Santos, NUSP 10819029 [henriquesqs](https://github.com/henriquesqs);
-- Witor M. A. de Oliveira, NUSP 10692190 [witorMao](https://github.com/witormao).
+- Henrique de S. Q. dos Santos, NUSP 10819029 ([henriquesqs](https://github.com/henriquesqs));
+- Witor M. A. de Oliveira, NUSP 10692190 ([witorMao](https://github.com/witormao)).
 
 ### How to use
 

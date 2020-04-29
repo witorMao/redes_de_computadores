@@ -1,6 +1,6 @@
 # Internet Relay Chat (IRC)
 
-This project was created in order to **simulate a IRC (Internet Relay Chat)** adapting [RFC 1459 specifications](https://tools.ietf.org/html/rfc1459).
+This project was created in order to **simulate an Internet Relay Chat (IRC)** adapting [RFC 1459 specifications](https://tools.ietf.org/html/rfc1459).
 
 ### Development
 
@@ -23,6 +23,5 @@ This project was made by:
   - Enter **0.0.0.0** as ip address;
   - Enter **51000** as port;
   - Enter your **nickname**;
-  - Type your message and then type "/send" in a new line to send your message;
-  - Send your first message and enjoy! :)
-  - If you want to quit of the communication, type in a new line "/quit" and done.
+  - Type your message, type enter and then type "/send" to send your message;
+  - If you want to end communication, type "/quit".

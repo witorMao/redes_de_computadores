@@ -67,10 +67,10 @@ int main(int argc, char const *argv[]) {
 
     close(socket);
 
-    memset(host, 0, NI_MAXHOST);    // cleaning possible garbage on host
-    memset(service, 0, NI_MAXSERV); // cleaning possible garbage on service
+    memset(host, 0, NI_MAXHOST);    // Cleaning possible garbage on host
+    memset(service, 0, NI_MAXSERV); // Cleaning possible garbage on service
 
-    // get computer information
+    // Getting computer information
     int info = getnameinfo((sockaddr *)&server_address, serverSize, host, NI_MAXHOST, service, NI_MAXSERV, 0);
 
     if (info)
@@ -80,57 +80,49 @@ int main(int argc, char const *argv[]) {
         cout << host << " connected on port " << ntohs(server_address.sin_port) << "\n";
     }
 
-    char buff[4096];
-    int bytesReceived = 0, bigNick = 0;
-
-    char nickname[20];
-    char confirmationMsg[14] = "Message sent!";
-    char confirmNick[40] = "Your nickname is registered. Have fun!!";
-    char welcomeMsg[91] = "Hello, there! Welcome to my TCP server.\nPlease, enter your nickname (max of 20 letters): ";
     string msg;
+    char buff[4096];
+    char nickname[20];
+    int bytesReceived = 0, bigNick = 0;
+    char confirmNick[40] = "Your nickname is registered. Have fun!!";
+    char welcomeMsg[89] = "Hello, there! Welcome to my TCP server.\nPlease, enter your nickname (max of 20 letters):";
 
-    send(clientSocket, welcomeMsg, sizeof(welcomeMsg), 0);             // sending welcome message
-    bytesReceived = recv(clientSocket, nickname, sizeof(nickname), 0); // waiting for user to input his nickname
-
-    send(clientSocket, confirmNick, sizeof(confirmNick), 0); // sending confirmation of nickname
-    string(nickname, 0, bytesReceived);                      // storing client's nickname
+    send(clientSocket, welcomeMsg, sizeof(welcomeMsg), 0);             // Sending welcome message
+    bytesReceived = recv(clientSocket, nickname, sizeof(nickname), 0); // Waiting for user to input his nickname
+    send(clientSocket, confirmNick, sizeof(confirmNick), 0);           // Sending confirmation of nickname
+    string(nickname, 0, bytesReceived);                                // Storing client's nickname
 
     cout << "Client's nickname: " << nickname << "\n\n"
          << "Start of the conversation:\n\n";
 
     while (true) {
 
-        //limpando msg pra poder mostrar certinho dps
-        msg.erase(0, msg.size());
+        msg.erase(0, msg.size()); // Cleaning message
 
-        memset(buff, 0, 4096); // cleaning the buffer
+        memset(buff, 0, 4096); // Cleaning buffer
         bytesReceived = 0;
 
-        // send(clientSocket, confirmationMsg, sizeof(confirmationMsg), 0); // asking for a message
-              
-        bytesReceived = recv(clientSocket, buff, 4096, 0);               // waiting for a message
+        bytesReceived = recv(clientSocket, buff, 4096, 0); // Waiting for a message
 
-        // checking for any errors
+        // Checking for any errors
         if (bytesReceived == -1) {
-            cerr << "Error on receiving message. Stopping."
-                 << "\n";
-            break;
+            cerr << "Error on receiving message. Stopping.\n";
+            return 0;
         }
 
         if (bytesReceived == 0) {
-            cout << "Client disconnected. Stopping."
-                 << "\n";
-            break;
+            cout << "Client disconnected. Stopping.\n";
+            return 0;
         }
 
-        send(clientSocket, buff, 4096, 0); // ressend message
+        send(clientSocket, buff, 4096, 0); // Ressend message
 
-        /* caso a mensagem tenha menos do que 4096 caracteres, ou seja o que restou da mensagem com mais de 4096 caracteres, 
-        ela é colocada no buffer e enviada ao cliente */
+        // If the message is smaller than 4096 chars, i.e, the remaining of
+        // the big message, we are storing it in buff and sending to client.
         buff[4095] = 0;
         msg = buff;
 
-        cout << "Message from " << nickname << " : " << msg << "\n"; // display message
+        cout << "Message from " << nickname << ": " << msg << "\n"; // Displaying message
     }
 
     close(clientSocket);

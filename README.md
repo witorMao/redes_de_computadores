@@ -4,7 +4,7 @@ This project was created in order to **simulate a IRC (Internet Relay Chat)** ad
 
 ### Development
 
-All the project was developed using **C++ languague** and **g++ compiler** on Linux
+All the project was developed using **C++ languague** and **g++ compiler** on Fedora 31 workstation.
 
 ### Members
 

@@ -21,6 +21,6 @@ This project was made by:
 - On first terminal, use **make s** to run server side application. You won't see nothing after running this;
 - On second terminal, use **make c** to run client side application. Wait for the welcome message and follow this instructions:
   - Enter **0.0.0.0** as ip address;
-  - Enter **54000** as port;
+  - Enter **51000** as port;
   - Enter your **nickname**;
   - Send your first message and enjoy! :)

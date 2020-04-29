@@ -66,8 +66,8 @@ int main(int argc, char const *argv[]) {
 
         while (true) {
 
-            cout << bigNickname; // Printing error message
-            getline(cin, nickname);      // Saving new client's nickname
+            cout << bigNickname;    // Printing error message
+            getline(cin, nickname); // Saving new client's nickname
 
             if (nickname.size() <= 20)
                 break;

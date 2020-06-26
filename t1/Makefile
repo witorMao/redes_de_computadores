@@ -1,9 +1,12 @@
 all:
-	g++ client.cpp -o client
-	g++ server.cpp -o server
+	g++ serverMultithread.cpp -g -o server.exe -pthread -std=c++11
+	g++ clientMultithread.cpp -g -o client.exe -pthread -std=c++11
 
 s:
-	./server
+	./server.exe
 
 c:
-	./client
+	./client.exe
+
+clean:
+	rm *.exe
